@@ -1,0 +1,28 @@
+---
+import SplineScene from './SplineScene.astro';
+---
+
+<section id="hero" class="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
+  <SplineScene sceneUrl="/spline/hero-scene.splinecode" />
+
+  <div class="relative z-10 text-center px-6 max-w-4xl mx-auto">
+    <h1 class="font-display font-bold gradient-headline text-5xl sm:text-7xl md:text-8xl lg:text-9xl mb-6">
+      KB Labs
+    </h1>
+    <p class="text-text-secondary text-lg sm:text-xl md:text-2xl max-w-2xl mx-auto mb-10 leading-relaxed">
+      Innovating at the intersection of AI, Security, Software Engineering, and Data.
+    </p>
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+      <a href="#contact" class="btn-primary text-base">Start a Project</a>
+      <a href="#work" class="btn-secondary text-base">See Our Work</a>
+    </div>
+  </div>
+
+  <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
+    <a href="#services" class="animate-bounce-subtle block text-text-muted hover:text-gold transition-colors">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+      </svg>
+    </a>
+  </div>
+</section>

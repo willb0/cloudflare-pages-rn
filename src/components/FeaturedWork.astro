@@ -1,0 +1,76 @@
+---
+const projects = [
+  {
+    title: 'Project Alpha',
+    description: 'Enterprise-grade AI platform for predictive maintenance and anomaly detection.',
+    tags: ['Python', 'TensorFlow', 'AWS', 'React'],
+    image: '/img/preview.png',
+  },
+  {
+    title: 'Project Beta',
+    description: 'Zero-trust security architecture for a Fortune 500 financial services firm.',
+    tags: ['Rust', 'Kubernetes', 'Terraform', 'Cloudflare'],
+    image: '/img/preview.png',
+  },
+  {
+    title: 'Project Gamma',
+    description: 'Real-time data pipeline processing 10M+ events per day for e-commerce analytics.',
+    tags: ['Apache Kafka', 'Spark', 'PostgreSQL', 'Go'],
+    image: '/img/preview.png',
+  },
+];
+---
+
+<section id="work" class="py-24 md:py-32 px-6 bg-bg-surface">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-16 reveal">
+      <h2 class="font-display font-bold text-4xl md:text-5xl gradient-headline inline-block mb-4">
+        Selected Projects
+      </h2>
+      <p class="text-text-secondary text-lg max-w-xl mx-auto">
+        Placeholder projects — real case studies with screenshots coming soon.
+      </p>
+    </div>
+
+    <div class="space-y-8">
+      {projects.map((project, i) => (
+        <div class="glass-card overflow-hidden reveal" style={`transition-delay: ${i * 150}ms;`}>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-0">
+            <div class="relative overflow-hidden bg-bg-surface-high">
+              <div class="aspect-video lg:aspect-auto lg:h-full p-8 flex items-center justify-center">
+                <div class="relative w-full max-w-md">
+                  <div class="rounded-lg overflow-hidden border border-white/10 shadow-2xl">
+                    <div class="bg-bg-surface-high px-4 py-2 flex items-center gap-2 border-b border-white/5">
+                      <div class="flex gap-1.5">
+                        <div class="w-2.5 h-2.5 rounded-full bg-red-500/60"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-yellow-500/60"></div>
+                        <div class="w-2.5 h-2.5 rounded-full bg-green-500/60"></div>
+                      </div>
+                    </div>
+                    <img src={project.image} alt={project.title} class="w-full" loading="lazy" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-8 lg:p-12 flex flex-col justify-center">
+              <h3 class="font-display font-bold text-2xl text-text-primary mb-3">
+                {project.title}
+              </h3>
+              <p class="text-text-secondary leading-relaxed mb-6">
+                {project.description}
+              </p>
+              <div class="flex flex-wrap gap-2">
+                {project.tags.map((tag) => (
+                  <span class="text-xs font-medium px-3 py-1 rounded-full bg-gold/10 text-gold border border-gold/20">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

@@ -1,0 +1,54 @@
+---
+interface Props {
+  sceneUrl: string;
+}
+const { sceneUrl } = Astro.props;
+---
+
+<div class="spline-container absolute inset-0 z-0">
+  <div id="spline-fallback" class="absolute inset-0 bg-gradient-to-br from-bg-primary via-bg-surface to-bg-primary">
+    <div class="absolute inset-0 opacity-20" style="background: radial-gradient(circle at 30% 40%, rgba(224, 178, 52, 0.15) 0%, transparent 50%), radial-gradient(circle at 70% 60%, rgba(224, 178, 52, 0.1) 0%, transparent 50%);"></div>
+  </div>
+  <canvas id="spline-canvas" class="absolute inset-0 w-full h-full opacity-0 transition-opacity duration-1000" data-scene={sceneUrl}></canvas>
+</div>
+
+<script>
+  async function loadSpline() {
+    const canvas = document.getElementById('spline-canvas') as HTMLCanvasElement;
+    const fallback = document.getElementById('spline-fallback');
+    if (!canvas) return;
+
+    const sceneUrl = canvas.dataset.scene;
+    if (!sceneUrl) return;
+
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+    if (!gl) return;
+
+    try {
+      const { Application } = await import('@splinetool/runtime');
+      const app = new Application(canvas);
+      await app.load(sceneUrl);
+      canvas.classList.remove('opacity-0');
+      canvas.classList.add('opacity-100');
+      if (fallback) {
+        fallback.classList.add('opacity-0');
+        setTimeout(() => fallback.remove(), 1000);
+      }
+    } catch (err) {
+      console.warn('Spline scene failed to load, keeping fallback:', err);
+    }
+  }
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      if (entries[0].isIntersecting) {
+        loadSpline();
+        observer.disconnect();
+      }
+    },
+    { threshold: 0.1 }
+  );
+
+  const container = document.querySelector('.spline-container');
+  if (container) observer.observe(container);
+</script>

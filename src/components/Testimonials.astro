@@ -1,0 +1,26 @@
+---
+const testimonials = [
+  { quote: 'KB Labs transformed our data infrastructure. What used to take hours now runs in seconds.', name: 'Client Name', role: 'CTO, Company' },
+  { quote: 'Their security audit uncovered vulnerabilities our previous team missed entirely. Exceptional work.', name: 'Client Name', role: 'VP Engineering, Company' },
+  { quote: 'The AI solution they built exceeded our expectations. A true force multiplier for our team.', name: 'Client Name', role: 'Director of Product, Company' },
+];
+---
+
+<section id="testimonials" class="py-24 md:py-32 px-6">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center mb-16 reveal">
+      <h2 class="font-display font-bold text-4xl md:text-5xl gradient-headline inline-block mb-4">What Clients Say</h2>
+    </div>
+    <div class="space-y-6">
+      {testimonials.map((t, i) => (
+        <div class="glass-card p-8 md:p-10 reveal" style={`transition-delay: ${i * 100}ms;`}>
+          <blockquote class="text-text-primary text-lg md:text-xl leading-relaxed mb-6 font-light">"{t.quote}"</blockquote>
+          <div>
+            <p class="font-display font-semibold text-gold text-sm">{t.name}</p>
+            <p class="text-text-muted text-xs">{t.role}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

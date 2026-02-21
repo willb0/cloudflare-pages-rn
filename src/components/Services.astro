@@ -1,0 +1,58 @@
+---
+const services = [
+  {
+    title: 'AI & Machine Learning',
+    description: 'Intelligent systems powered by NLP, computer vision, and predictive analytics. We build models that solve real business problems.',
+    icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
+  },
+  {
+    title: 'Cybersecurity',
+    description: 'Threat detection, penetration testing, and security architecture. Protecting your infrastructure with defense-in-depth strategies.',
+    icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+  },
+  {
+    title: 'Software Engineering',
+    description: 'Full-stack development, cloud infrastructure, API design, and DevOps. Scalable systems built with modern best practices.',
+    icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4',
+  },
+  {
+    title: 'Data Engineering',
+    description: 'Data pipelines, analytics platforms, real-time processing, and governance. Turning raw data into actionable intelligence.',
+    icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4',
+  },
+];
+---
+
+<section id="services" class="py-24 md:py-32 px-6">
+  <div class="max-w-7xl mx-auto">
+    <div class="text-center mb-16 reveal">
+      <h2 class="font-display font-bold text-4xl md:text-5xl gradient-headline inline-block mb-4">
+        What We Build
+      </h2>
+      <p class="text-text-secondary text-lg max-w-xl mx-auto">
+        End-to-end solutions across four core disciplines.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+      {services.map((service, i) => (
+        <div
+          class="glass-card p-8 group reveal"
+          style={`transition-delay: ${i * 100}ms;`}
+        >
+          <div class="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center mb-6 group-hover:bg-gold/20 transition-colors">
+            <svg class="w-6 h-6 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d={service.icon} />
+            </svg>
+          </div>
+          <h3 class="font-display font-semibold text-xl text-text-primary mb-3">
+            {service.title}
+          </h3>
+          <p class="text-text-secondary text-sm leading-relaxed">
+            {service.description}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
