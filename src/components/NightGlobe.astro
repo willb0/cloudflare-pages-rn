@@ -1,0 +1,552 @@
+---
+---
+
+<div id="globe-container" class="absolute inset-0 z-0">
+  <canvas id="globe-canvas" class="w-full h-full"></canvas>
+  <!-- Fallback gradient (visible until globe loads) -->
+  <div id="globe-fallback" class="absolute inset-0 bg-bg-primary">
+    <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(224,178,52,0.08)_0%,transparent_70%)]"></div>
+  </div>
+</div>
+
+<script>
+  import * as THREE from 'three';
+
+  // Major world cities [lat, lng, population-weight (0-1)]
+  const CITIES = [
+    // North America
+    [40.7128, -74.006, 1],      // New York
+    [34.0522, -118.2437, 0.9],  // Los Angeles
+    [41.8781, -87.6298, 0.8],   // Chicago
+    [29.7604, -95.3698, 0.7],   // Houston
+    [33.749, -84.388, 0.6],     // Atlanta
+    [43.6532, -79.3832, 0.7],   // Toronto
+    [19.4326, -99.1332, 0.9],   // Mexico City
+    [25.7617, -80.1918, 0.6],   // Miami
+    [47.6062, -122.3321, 0.6],  // Seattle
+    [37.7749, -122.4194, 0.8],  // San Francisco
+    [49.2827, -123.1207, 0.5],  // Vancouver
+    [45.5017, -73.5673, 0.5],   // Montreal
+    [39.9526, -75.1652, 0.6],   // Philadelphia
+    [32.7767, -96.797, 0.6],    // Dallas
+    [42.3601, -71.0589, 0.6],   // Boston
+
+    // South America
+    [-23.5505, -46.6333, 0.95], // São Paulo
+    [-22.9068, -43.1729, 0.8],  // Rio de Janeiro
+    [-34.6037, -58.3816, 0.8],  // Buenos Aires
+    [4.711, -74.0721, 0.7],     // Bogotá
+    [-12.0464, -77.0428, 0.7],  // Lima
+    [-33.4489, -70.6693, 0.6],  // Santiago
+
+    // Europe
+    [51.5074, -0.1278, 0.95],   // London
+    [48.8566, 2.3522, 0.9],     // Paris
+    [52.52, 13.405, 0.8],       // Berlin
+    [40.4168, -3.7038, 0.8],    // Madrid
+    [41.9028, 12.4964, 0.7],    // Rome
+    [55.7558, 37.6173, 0.9],    // Moscow
+    [59.3293, 18.0686, 0.6],    // Stockholm
+    [52.3676, 4.9041, 0.6],     // Amsterdam
+    [50.0755, 14.4378, 0.6],    // Prague
+    [47.4979, 19.0402, 0.6],    // Budapest
+    [48.2082, 16.3738, 0.6],    // Vienna
+    [38.7223, -9.1393, 0.6],    // Lisbon
+    [41.0082, 28.9784, 0.8],    // Istanbul
+
+    // Africa
+    [30.0444, 31.2357, 0.85],   // Cairo
+    [6.5244, 3.3792, 0.8],      // Lagos
+    [-1.2921, 36.8219, 0.6],    // Nairobi
+    [-33.9249, 18.4241, 0.6],   // Cape Town
+    [33.5731, -7.5898, 0.6],    // Casablanca
+    [9.082, 7.4914, 0.6],       // Abuja
+
+    // Middle East
+    [25.2048, 55.2708, 0.8],    // Dubai
+    [24.7136, 46.6753, 0.7],    // Riyadh
+    [32.0853, 34.7818, 0.6],    // Tel Aviv
+
+    // Asia
+    [35.6762, 139.6503, 1],     // Tokyo
+    [31.2304, 121.4737, 0.95],  // Shanghai
+    [39.9042, 116.4074, 0.95],  // Beijing
+    [22.3193, 114.1694, 0.85],  // Hong Kong
+    [1.3521, 103.8198, 0.8],    // Singapore
+    [37.5665, 126.978, 0.85],   // Seoul
+    [13.7563, 100.5018, 0.8],   // Bangkok
+    [28.6139, 77.209, 0.9],     // New Delhi
+    [19.076, 72.8777, 0.95],    // Mumbai
+    [23.8103, 90.4125, 0.8],    // Dhaka
+    [14.5995, 120.9842, 0.7],   // Manila
+    [-6.2088, 106.8456, 0.85],  // Jakarta
+    [21.0278, 105.8342, 0.7],   // Hanoi
+    [3.139, 101.6869, 0.7],     // Kuala Lumpur
+    [34.6937, 135.5023, 0.7],   // Osaka
+    [22.5726, 88.3639, 0.7],    // Kolkata
+    [13.0827, 80.2707, 0.6],    // Chennai
+    [12.9716, 77.5946, 0.7],    // Bangalore
+
+    // Oceania
+    [-33.8688, 151.2093, 0.8],  // Sydney
+    [-37.8136, 144.9631, 0.7],  // Melbourne
+    [-36.8485, 174.7633, 0.5],  // Auckland
+  ];
+
+  function latLngToVec3(lat: number, lng: number, radius: number): THREE.Vector3 {
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (lng + 180) * (Math.PI / 180);
+    return new THREE.Vector3(
+      -(radius * Math.sin(phi) * Math.cos(theta)),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.sin(theta)
+    );
+  }
+
+  function init() {
+    const canvas = document.getElementById('globe-canvas') as HTMLCanvasElement;
+    const container = document.getElementById('globe-container') as HTMLElement;
+    const fallback = document.getElementById('globe-fallback') as HTMLElement;
+    if (!canvas || !container) return;
+
+    // Scene setup
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    camera.position.z = 2.8;
+
+    const renderer = new THREE.WebGLRenderer({
+      canvas,
+      antialias: true,
+      alpha: true,
+    });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+
+    // Globe
+    const globeRadius = 1;
+    const globeGeo = new THREE.SphereGeometry(globeRadius, 64, 64);
+
+    // Load earth night texture
+    const textureLoader = new THREE.TextureLoader();
+    const earthTexture = textureLoader.load('/img/earth-night.jpg');
+    earthTexture.colorSpace = THREE.SRGBColorSpace;
+
+    // Shader: earth night texture + fresnel rim glow
+    const globeMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTexture: { value: earthTexture },
+        uBrightness: { value: 1.4 },
+        uGoldTint: { value: new THREE.Color(0xe0b234) },
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        varying vec2 vUv;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D uTexture;
+        uniform float uBrightness;
+        uniform vec3 uGoldTint;
+        varying vec3 vNormal;
+        varying vec3 vPosition;
+        varying vec2 vUv;
+
+        void main() {
+          // Sample the night earth texture
+          vec3 texColor = texture2D(uTexture, vUv).rgb;
+
+          // Boost brightness of city lights
+          float luminance = dot(texColor, vec3(0.299, 0.587, 0.114));
+          texColor *= uBrightness;
+
+          // Tint bright areas (city lights) slightly gold
+          texColor = mix(texColor, texColor * uGoldTint * 2.0, luminance * 0.3);
+
+          // Darken the ocean areas slightly (they're already mostly dark)
+          // and add a very subtle blue tint to dark areas
+          vec3 oceanTint = vec3(0.02, 0.03, 0.06);
+          texColor = mix(oceanTint, texColor, smoothstep(0.02, 0.1, luminance));
+
+          // Fresnel rim glow
+          vec3 viewDir = normalize(-vPosition);
+          float fresnel = 1.0 - dot(vNormal, viewDir);
+          fresnel = pow(fresnel, 3.5) * 0.25;
+          texColor += uGoldTint * fresnel;
+
+          gl_FragColor = vec4(texColor, 1.0);
+        }
+      `,
+    });
+
+    const globe = new THREE.Mesh(globeGeo, globeMat);
+    scene.add(globe);
+
+    // Atmosphere glow
+    const atmosGeo = new THREE.SphereGeometry(globeRadius * 1.15, 64, 64);
+    const atmosMat = new THREE.ShaderMaterial({
+      uniforms: {
+        uGlowColor: { value: new THREE.Color(0xe0b234) },
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vWorldPos;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uGlowColor;
+        varying vec3 vNormal;
+        varying vec3 vWorldPos;
+        void main() {
+          vec3 viewDir = normalize(cameraPosition - vWorldPos);
+          float intensity = pow(0.65 - dot(vNormal, viewDir), 4.0);
+          gl_FragColor = vec4(uGlowColor, intensity * 0.4);
+        }
+      `,
+      transparent: true,
+      side: THREE.BackSide,
+      depthWrite: false,
+    });
+    const atmosphere = new THREE.Mesh(atmosGeo, atmosMat);
+    scene.add(atmosphere);
+
+    // City lights
+    const cityGroup = new THREE.Group();
+    const dotGeo = new THREE.SphereGeometry(0.006, 8, 8);
+
+    // Generate circular glow texture
+    const glowCanvas = document.createElement('canvas');
+    glowCanvas.width = 64;
+    glowCanvas.height = 64;
+    const ctx = glowCanvas.getContext('2d')!;
+    const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradient.addColorStop(0, 'rgba(240, 208, 96, 1)');
+    gradient.addColorStop(0.3, 'rgba(224, 178, 52, 0.6)');
+    gradient.addColorStop(0.7, 'rgba(224, 178, 52, 0.15)');
+    gradient.addColorStop(1, 'rgba(224, 178, 52, 0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 64, 64);
+    const glowTexture = new THREE.CanvasTexture(glowCanvas);
+
+    CITIES.forEach(([lat, lng, weight]) => {
+      const pos = latLngToVec3(lat, lng, globeRadius * 1.003);
+
+      // Glowing dot
+      const dotMat = new THREE.MeshBasicMaterial({
+        color: new THREE.Color().lerpColors(
+          new THREE.Color(0xf0d060),
+          new THREE.Color(0xe0b234),
+          weight
+        ),
+      });
+      const dot = new THREE.Mesh(dotGeo, dotMat);
+      dot.position.copy(pos);
+      cityGroup.add(dot);
+
+      // Light halo (sprite with circular texture)
+      const spriteMat = new THREE.SpriteMaterial({
+        map: glowTexture,
+        color: 0xe0b234,
+        transparent: true,
+        opacity: weight * 0.6,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.position.copy(pos);
+      sprite.scale.setScalar(0.04 + weight * 0.04);
+      cityGroup.add(sprite);
+    });
+
+    scene.add(cityGroup);
+
+    // Data flow arcs between cities
+    const arcsGroup = new THREE.Group();
+    const ARC_CONNECTIONS = [
+      // [fromCityIndex, toCityIndex]
+      [0, 23],   // New York -> London
+      [0, 45],   // New York -> Tokyo
+      [23, 33],  // London -> Istanbul
+      [45, 46],  // Tokyo -> Shanghai
+      [46, 49],  // Shanghai -> Singapore
+      [1, 45],   // Los Angeles -> Tokyo
+      [23, 42],  // London -> Dubai
+      [49, 56],  // Singapore -> Sydney
+      [0, 7],    // New York -> Miami
+      [7, 20],   // Miami -> São Paulo
+      [23, 34],  // London -> Moscow
+      [42, 48],  // Dubai -> Mumbai
+      [48, 49],  // Mumbai -> Singapore
+      [2, 23],   // Chicago -> London
+      [9, 50],   // San Francisco -> Seoul
+      [34, 47],  // Moscow -> Beijing
+      [24, 33],  // Madrid -> Istanbul
+      [20, 21],  // São Paulo -> Buenos Aires
+      [35, 36],  // Cairo -> Lagos
+      [37, 42],  // Nairobi -> Dubai
+    ];
+
+    interface ArcData {
+      mesh: THREE.Mesh;
+      progress: number;
+      speed: number;
+      delay: number;
+      active: boolean;
+    }
+
+    const arcs: ArcData[] = [];
+
+    function createArc(fromIdx: number, toIdx: number, delayMs: number): ArcData | null {
+      const fromCity = CITIES[fromIdx];
+      const toCity = CITIES[toIdx];
+      if (!fromCity || !toCity) return null;
+
+      const from = latLngToVec3(fromCity[0], fromCity[1], globeRadius * 1.005);
+      const to = latLngToVec3(toCity[0], toCity[1], globeRadius * 1.005);
+
+      // Calculate arc height based on distance
+      const dist = from.distanceTo(to);
+      const arcHeight = globeRadius + dist * 0.4;
+
+      // Mid point raised above the globe surface
+      const mid = new THREE.Vector3().addVectors(from, to).multiplyScalar(0.5);
+      mid.normalize().multiplyScalar(arcHeight);
+
+      // Quadratic bezier curve
+      const curve = new THREE.QuadraticBezierCurve3(from, mid, to);
+      const totalPoints = 60;
+      const points = curve.getPoints(totalPoints);
+
+      // Create geometry with all points but we'll animate visibility via drawRange
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+
+      const material = new THREE.LineBasicMaterial({
+        color: 0xe0b234,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      });
+
+      const mesh = new THREE.Line(geometry, material) as unknown as THREE.Mesh;
+      arcsGroup.add(mesh);
+
+      return {
+        mesh,
+        progress: 0,
+        speed: 0.005 + Math.random() * 0.008,
+        delay: delayMs,
+        active: false,
+      };
+    }
+
+    ARC_CONNECTIONS.forEach(([from, to], i) => {
+      const arc = createArc(from, to, i * 300 + Math.random() * 2000);
+      if (arc) arcs.push(arc);
+    });
+
+    scene.add(arcsGroup);
+
+    // Travelling pulse particles along arcs
+    const pulseGeo = new THREE.SphereGeometry(0.006, 6, 6);
+    const pulseMat = new THREE.MeshBasicMaterial({
+      color: 0xf0d060,
+      transparent: true,
+      opacity: 0.9,
+    });
+
+    interface PulseData {
+      mesh: THREE.Mesh;
+      arcIndex: number;
+      t: number;
+      speed: number;
+      forward: boolean;
+    }
+
+    const pulses: PulseData[] = [];
+
+    function spawnPulse(arcIndex: number) {
+      const arcData = arcs[arcIndex];
+      if (!arcData) return;
+      const geom = arcData.mesh.geometry as THREE.BufferGeometry;
+      const positions = geom.getAttribute('position');
+      if (!positions || positions.count < 2) return;
+
+      const pulse = new THREE.Mesh(pulseGeo, pulseMat.clone());
+      const forward = Math.random() > 0.5;
+      const startT = forward ? 0 : 1;
+      const idx = Math.floor(startT * (positions.count - 1));
+      pulse.position.set(
+        positions.getX(idx),
+        positions.getY(idx),
+        positions.getZ(idx)
+      );
+      arcsGroup.add(pulse);
+
+      pulses.push({
+        mesh: pulse,
+        arcIndex,
+        t: startT,
+        speed: 0.008 + Math.random() * 0.012,
+        forward,
+      });
+    }
+
+    // Stars
+    const starsGeo = new THREE.BufferGeometry();
+    const starsCount = 2000;
+    const starsPos = new Float32Array(starsCount * 3);
+    for (let i = 0; i < starsCount * 3; i += 3) {
+      const r = 8 + Math.random() * 12;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      starsPos[i] = r * Math.sin(phi) * Math.cos(theta);
+      starsPos[i + 1] = r * Math.sin(phi) * Math.sin(theta);
+      starsPos[i + 2] = r * Math.cos(phi);
+    }
+    starsGeo.setAttribute('position', new THREE.BufferAttribute(starsPos, 3));
+    const starsMat = new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 0.015,
+      transparent: true,
+      opacity: 0.6,
+    });
+    scene.add(new THREE.Points(starsGeo, starsMat));
+
+    // Mouse tracking
+    let mouseX = 0;
+    let mouseY = 0;
+    let targetRotationX = 0;
+    let targetRotationY = 0;
+
+    container.addEventListener('mousemove', (e) => {
+      const rect = container.getBoundingClientRect();
+      mouseX = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+      mouseY = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    });
+
+    // Hide fallback
+    if (fallback) {
+      fallback.style.opacity = '0';
+      fallback.style.transition = 'opacity 0.8s ease';
+      setTimeout(() => fallback.remove(), 800);
+    }
+
+    // Animation loop
+    let time = 0;
+    let elapsed = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.002;
+      elapsed += 16; // ~60fps approximation
+
+      // Auto-rotate + mouse influence
+      targetRotationY = time + mouseX * 0.3;
+      targetRotationX = mouseY * 0.2;
+
+      globe.rotation.y += (targetRotationY - globe.rotation.y) * 0.05;
+      globe.rotation.x += (targetRotationX - globe.rotation.x) * 0.05;
+      cityGroup.rotation.y = globe.rotation.y;
+      cityGroup.rotation.x = globe.rotation.x;
+      arcsGroup.rotation.y = globe.rotation.y;
+      arcsGroup.rotation.x = globe.rotation.x;
+
+      // Animate arcs: draw them in over time, then fade and restart
+      arcs.forEach((arc, i) => {
+        if (elapsed < arc.delay) return;
+        if (!arc.active) {
+          arc.active = true;
+          arc.progress = 0;
+        }
+
+        arc.progress += arc.speed;
+
+        const geom = arc.mesh.geometry as THREE.BufferGeometry;
+        const totalPoints = geom.getAttribute('position').count;
+
+        if (arc.progress <= 1) {
+          // Drawing in: grow the visible line
+          const drawCount = Math.floor(arc.progress * totalPoints);
+          geom.setDrawRange(0, drawCount);
+          (arc.mesh.material as THREE.LineBasicMaterial).opacity = 0.5;
+        } else if (arc.progress <= 2) {
+          // Hold fully drawn
+          geom.setDrawRange(0, totalPoints);
+          const fade = 2 - arc.progress;
+          (arc.mesh.material as THREE.LineBasicMaterial).opacity = 0.5 * fade;
+        } else {
+          // Reset cycle
+          arc.progress = 0;
+          arc.delay = elapsed + 1000 + Math.random() * 4000;
+          arc.active = false;
+          geom.setDrawRange(0, 0);
+        }
+
+        // Spawn pulse at random intervals
+        if (arc.active && Math.random() < 0.003) {
+          spawnPulse(i);
+        }
+      });
+
+      // Animate travelling pulses
+      for (let i = pulses.length - 1; i >= 0; i--) {
+        const p = pulses[i];
+        p.t += p.forward ? p.speed : -p.speed;
+
+        const arcGeom = arcs[p.arcIndex].mesh.geometry as THREE.BufferGeometry;
+        const positions = arcGeom.getAttribute('position');
+        const idx = Math.min(
+          Math.max(Math.floor(p.t * (positions.count - 1)), 0),
+          positions.count - 1
+        );
+        p.mesh.position.set(
+          positions.getX(idx),
+          positions.getY(idx),
+          positions.getZ(idx)
+        );
+
+        // Fade near endpoints
+        const edgeDist = Math.min(p.t, 1 - p.t);
+        (p.mesh.material as THREE.MeshBasicMaterial).opacity = Math.min(edgeDist * 5, 0.9);
+
+        // Remove when done
+        if (p.t > 1 || p.t < 0) {
+          arcsGroup.remove(p.mesh);
+          (p.mesh.material as THREE.Material).dispose();
+          pulses.splice(i, 1);
+        }
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Resize handler
+    const onResize = () => {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    };
+    window.addEventListener('resize', onResize);
+  }
+
+  // Init when visible or immediately if already visible
+  if (document.readyState === 'complete') {
+    init();
+  } else {
+    window.addEventListener('load', init);
+  }
+</script>
