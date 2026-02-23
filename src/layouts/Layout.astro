@@ -8,7 +8,7 @@ interface Props {
 }
 
 const {
-  title = 'KB Labs | Development Agency',
+  title = 'KB Labs',
   description = 'KB Labs is a development agency innovating at the intersection of AI, Security, Software Engineering, and Data.',
 } = Astro.props;
 ---
@@ -24,7 +24,8 @@ const {
 
     <title>{title}</title>
 
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
     <!-- Preload critical fonts -->
     <link rel="preload" href="/fonts/SpaceGrotesk-Variable.woff2" as="font" type="font/woff2" crossorigin />
