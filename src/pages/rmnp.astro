@@ -1,0 +1,1765 @@
+---
+// RMNP Wilderness Reservation Launch Pad
+// Standalone page — does not use site Layout to keep its own aesthetic
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>RMNP Wilderness Reservation Launch Pad</title>
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #0A0A0F;
+      --bg-surface: #141418;
+      --bg-surface-high: #1E1E24;
+      --bg-card: rgba(255,255,255,0.04);
+      --gold: #E0B234;
+      --gold-light: #F0D060;
+      --gold-dark: #B8922A;
+      --green: #2D5F2D;
+      --green-light: #3a7a3a;
+      --text: #F5F0E8;
+      --text-secondary: #9A9488;
+      --text-muted: #5C5850;
+      --danger: #ff6b6b;
+      --radius: 16px;
+      --radius-sm: 12px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+
+    /* === HEADER === */
+    header {
+      text-align: center;
+      padding: 40px 20px 28px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .header-logo {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin-bottom: 16px;
+      border: 2px solid rgba(224,178,52,0.2);
+    }
+    header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(22px, 4vw, 36px);
+      font-weight: 700;
+      background: linear-gradient(135deg, #F5F0E8 0%, #E0B234 50%, #B8922A 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    .header-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    #current-time {
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--gold-light);
+      font-size: 15px;
+    }
+    .header-meta a { color: var(--gold); text-decoration: none; }
+    .header-meta a:hover { text-decoration: underline; color: var(--gold-light); }
+    .reminder {
+      display: inline-block;
+      background: rgba(224,178,52,0.1);
+      color: var(--gold-light);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-top: 14px;
+      border: 1px solid rgba(224,178,52,0.15);
+    }
+
+    /* === SECTIONS === */
+    section {
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-top: 20px;
+      transition: all 0.3s ease;
+    }
+    section h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--gold);
+      margin-bottom: 18px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+    }
+
+    /* === CONFIG PANEL === */
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .field input:focus, .field select:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(224,178,52,0.15);
+    }
+    .field select option { background: var(--bg-surface); }
+    .calc-display {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      padding: 12px 16px;
+      background: rgba(224,178,52,0.06);
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(224,178,52,0.12);
+    }
+    .calc-display span { color: var(--text-secondary); }
+    .calc-display strong { color: var(--text); font-family: 'JetBrains Mono', monospace; }
+
+    /* === SITE SELECTOR === */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .filter-bar select, .filter-bar input[type="text"] {
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      min-width: 140px;
+      transition: all 0.2s ease;
+    }
+    .filter-bar select option { background: var(--bg-surface); }
+    .filter-bar input[type="text"] { flex: 1; min-width: 160px; }
+    .filter-bar input[type="text"]:focus, .filter-bar select:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(224,178,52,0.1);
+    }
+    .btn-sm {
+      padding: 8px 14px;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .btn-sm:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-sm.active { border-color: var(--gold); color: var(--gold); background: rgba(224,178,52,0.1); }
+    .nbbc-badge { color: var(--gold-light); font-size: 11px; margin-left: 4px; }
+    .selected-badge {
+      margin-left: auto;
+      font-size: 13px;
+      color: var(--gold);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .site-table-wrap {
+      overflow-x: auto;
+      max-height: 420px;
+      overflow-y: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .site-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .site-table thead {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    .site-table th {
+      background: var(--bg-surface-high);
+      padding: 10px 10px;
+      text-align: left;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .site-table th:hover { color: var(--gold); }
+    .site-table th.sorted-asc::after { content: ' \25B2'; font-size: 9px; }
+    .site-table th.sorted-desc::after { content: ' \25BC'; font-size: 9px; }
+    .site-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      white-space: nowrap;
+    }
+    .site-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .site-table tr.selected td { background: rgba(224,178,52,0.06); }
+    .site-table input[type="checkbox"] {
+      accent-color: var(--gold);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+    .site-unavail { color: var(--text-muted); opacity: 0.5; }
+    .privy-yes { color: var(--green-light); }
+    .privy-hwb { color: var(--gold); }
+    .privy-no { color: var(--text-muted); }
+
+    /* === LAUNCH CONTROL === */
+    .launch-panel {
+      text-align: center;
+      position: relative;
+    }
+    .launch-panel.armed {
+      box-shadow: 0 0 0 2px var(--gold), 0 0 30px rgba(224,178,52,0.1);
+      animation: pulse-border 2s infinite;
+    }
+    @keyframes pulse-border {
+      0%, 100% { box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(224,178,52,0.08); }
+      50% { box-shadow: 0 0 0 2px var(--gold-light), 0 0 40px rgba(224,178,52,0.2); }
+    }
+    #status-indicator {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      font-weight: 500;
+    }
+    #status-indicator.soon { color: var(--gold-light); }
+    #status-indicator.countdown { color: var(--danger); animation: blink 1s infinite; }
+    #status-indicator.go { color: #4ade80; font-size: 18px; }
+    @keyframes blink { 50% { opacity: 0.6; } }
+
+    #countdown-display {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: clamp(48px, 12vw, 96px);
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 4px;
+      margin: 8px 0 16px;
+      line-height: 1;
+    }
+    #countdown-display.urgent { color: var(--gold-light); }
+    #countdown-display.critical { color: var(--danger); }
+    #countdown-display.go { color: #4ade80; }
+
+    .progress-bar-wrap {
+      height: 3px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 2px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+      border-radius: 2px;
+      width: 0%;
+      transition: width 1s linear;
+    }
+
+    .launch-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-arm {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, #E0B234 0%, #B8922A 100%);
+      color: #0A0A0F;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .btn-arm:hover:not(:disabled) { box-shadow: 0 4px 24px rgba(224,178,52,0.3); transform: translateY(-1px); }
+    .btn-arm:disabled { opacity: 0.3; cursor: not-allowed; }
+    .btn-arm.armed-btn {
+      background: linear-gradient(135deg, var(--danger), #cc4444);
+      color: white;
+    }
+    .btn-manual {
+      padding: 14px 24px;
+      background: transparent;
+      color: var(--gold);
+      border: 1px solid var(--gold);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .btn-manual:hover:not(:disabled) { background: rgba(224,178,52,0.1); }
+    .btn-manual:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .fallback-panel {
+      margin-top: 16px;
+      padding: 16px;
+      background: rgba(255,107,107,0.06);
+      border: 1px solid rgba(255,107,107,0.15);
+      border-radius: var(--radius-sm);
+      display: none;
+    }
+    .fallback-panel h3 { color: var(--danger); font-size: 14px; margin-bottom: 8px; }
+    .fallback-link {
+      display: inline-block;
+      margin: 4px;
+      padding: 8px 16px;
+      background: rgba(224,178,52,0.1);
+      color: var(--gold);
+      border-radius: var(--radius-sm);
+      text-decoration: none;
+      font-size: 13px;
+      border: 1px solid rgba(224,178,52,0.2);
+      transition: all 0.2s ease;
+    }
+    .fallback-link:hover { background: rgba(224,178,52,0.2); }
+
+    /* === BRIEFING PANEL === */
+    .briefing-panel {
+      display: none;
+      margin-top: 24px;
+      padding: 24px;
+      background: var(--bg-surface);
+      border-left: 3px solid var(--gold);
+      border-radius: var(--radius-sm);
+      text-align: left;
+      border: 1px solid rgba(255,255,255,0.06);
+      border-left: 3px solid var(--gold);
+    }
+    .briefing-panel.visible {
+      display: block;
+    }
+    .briefing-panel h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 13px;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 16px;
+    }
+    .briefing-summary {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .briefing-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .briefing-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+    .briefing-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .briefing-sites {
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .briefing-area-group {
+      margin-bottom: 16px;
+    }
+    .briefing-area-group:last-child { margin-bottom: 0; }
+    .briefing-area-label {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding-bottom: 6px;
+      margin-bottom: 4px;
+      border-bottom: 1px solid rgba(224,178,52,0.15);
+    }
+    .briefing-site-row {
+      padding: 6px 0 6px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .briefing-site-row:last-child { border-bottom: none; }
+    .briefing-site-top {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .briefing-site-code {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .briefing-site-name {
+      color: var(--text-secondary);
+    }
+    .briefing-site-meta {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      padding-left: 42px;
+      margin-top: 2px;
+    }
+    .briefing-hint {
+      margin-top: 14px;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    /* === QUICK REFERENCE === */
+    details {
+      margin-top: 20px;
+      background: var(--bg-card);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius);
+    }
+    details summary {
+      padding: 18px 24px;
+      cursor: pointer;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      color: var(--gold);
+      font-size: 14px;
+      list-style: none;
+    }
+    details summary::before { content: '+ '; color: var(--text-muted); }
+    details[open] summary::before { content: '- '; }
+    details summary::-webkit-details-marker { display: none; }
+    .ref-content {
+      padding: 0 24px 24px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.8;
+    }
+    .ref-content a { color: var(--gold); text-decoration: none; transition: color 0.2s; }
+    .ref-content a:hover { color: var(--gold-light); text-decoration: underline; }
+    .ref-content ul { list-style: none; padding: 0; }
+    .ref-content li::before { content: '> '; color: var(--gold-dark); }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 640px) {
+      body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+      .container { padding: 8px; }
+      header { padding: 20px 12px 16px; }
+      header h1 { font-size: 20px; }
+      .header-meta { gap: 8px; font-size: 13px; }
+      section { padding: 14px; margin-top: 12px; }
+      section h2 { font-size: 14px; margin-bottom: 12px; }
+      .config-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .field input, .field select { padding: 12px; font-size: 16px; /* prevents iOS zoom */ }
+      .calc-display { gap: 12px; font-size: 12px; padding: 8px 10px; flex-direction: column; }
+      .filter-bar { flex-direction: column; align-items: stretch; gap: 6px; }
+      .filter-bar select, .filter-bar input[type="text"] { min-width: 0; width: 100%; padding: 12px; font-size: 16px; }
+      .btn-sm { padding: 12px 14px; font-size: 13px; min-height: 44px; }
+      .selected-badge { margin-left: 0; text-align: center; padding: 8px 0; }
+
+      /* Hide table, show card layout */
+      .site-table-wrap { max-height: 400px; border: none; }
+      .site-table thead { display: none; }
+      .site-table, .site-table tbody, .site-table tr, .site-table td {
+        display: block;
+        width: 100%;
+      }
+      .site-table tr {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 8px;
+        position: relative;
+      }
+      .site-table tr:hover td { background: none; }
+      .site-table tr.selected { border-color: rgba(224,178,52,0.3); }
+      .site-table td {
+        padding: 2px 0;
+        border: none;
+        white-space: normal;
+        font-size: 13px;
+      }
+      /* Checkbox cell — position top-right */
+      .site-table td:nth-child(1) {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: auto;
+      }
+      .site-table input[type="checkbox"] { width: 22px; height: 22px; min-width: 44px; min-height: 44px; }
+      /* Code cell — bold title */
+      .site-table td:nth-child(2) {
+        font-weight: 700;
+        color: var(--gold);
+        font-size: 14px;
+        padding-right: 50px; /* room for checkbox */
+      }
+      /* Name cell */
+      .site-table td:nth-child(3) { font-weight: 500; margin-bottom: 6px; }
+      /* Area cell — subtle label */
+      .site-table td:nth-child(4) { color: var(--text-secondary); font-size: 12px; margin-bottom: 8px; }
+      /* Data cells — inline with labels */
+      .site-table td:nth-child(5)::before { content: 'Dist: '; color: var(--text-secondary); font-size: 11px; }
+      .site-table td:nth-child(6)::before { content: 'Elev: '; color: var(--text-secondary); font-size: 11px; }
+      .site-table td:nth-child(7)::before { content: 'Gain: '; color: var(--text-secondary); font-size: 11px; }
+      .site-table td:nth-child(8)::before { content: 'Sites: '; color: var(--text-secondary); font-size: 11px; }
+      .site-table td:nth-child(9)::before { content: 'Group: '; color: var(--text-secondary); font-size: 11px; }
+      .site-table td:nth-child(10)::before { content: 'Snow Free: '; color: var(--text-secondary); font-size: 11px; }
+      .site-table td:nth-child(11)::before { content: 'Privy: '; color: var(--text-secondary); font-size: 11px; }
+      /* Data cells as inline grid */
+      .site-table td:nth-child(n+5) {
+        display: inline-block;
+        width: 48%;
+        padding: 2px 0;
+        font-size: 12px;
+      }
+      .site-table tr.site-unavail { opacity: 0.4; }
+
+      /* Launch section */
+      #countdown-display { letter-spacing: 2px; margin: 4px 0 12px; }
+      .launch-buttons { flex-direction: column; gap: 8px; }
+      .btn-arm { padding: 16px 24px; font-size: 16px; min-height: 48px; }
+      .btn-manual { padding: 14px 20px; min-height: 48px; }
+      .btn-arm, .btn-manual { width: 100%; }
+      .fallback-link { display: block; margin: 4px 0; padding: 12px 14px; text-align: center; }
+      .volume-control input[type="range"] { width: 120px; height: 44px; }
+      .briefing-panel { padding: 14px; margin-top: 14px; }
+      .briefing-summary { gap: 12px; }
+      .briefing-site-top { gap: 6px; }
+      .briefing-site-meta { padding-left: 32px; }
+
+      /* Map mobile */
+      #map-container { height: 360px; }
+      .view-toggle button { padding: 12px 16px; font-size: 13px; min-height: 44px; }
+      .map-legend { bottom: 24px; right: 6px; padding: 8px 10px; font-size: 10px; }
+
+      /* Quick reference */
+      details summary { padding: 14px 16px; font-size: 13px; }
+      .ref-content { padding: 0 16px 16px; font-size: 12px; }
+    }
+
+    /* Extra small screens */
+    @media (max-width: 380px) {
+      .config-grid { grid-template-columns: 1fr; }
+      .site-table td:nth-child(n+5) { width: 100%; }
+      header h1 { font-size: 18px; }
+    }
+
+    /* === VIEW TOGGLE === */
+    .view-toggle {
+      display: inline-flex;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+    .view-toggle button {
+      padding: 8px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .view-toggle button.active {
+      background: rgba(224,178,52,0.12);
+      color: var(--gold);
+    }
+    .view-toggle button:hover:not(.active) { color: var(--text); }
+
+    /* === MAP === */
+    #map-container {
+      display: none;
+      height: 500px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+      position: relative;
+    }
+    #map-container.active { display: block; }
+    #map { height: 100%; width: 100%; }
+
+    .leaflet-control-attribution {
+      background: rgba(255,255,255,0.7) !important;
+      font-size: 10px !important;
+    }
+
+    /* Map legend */
+    .map-legend {
+      position: absolute;
+      bottom: 28px;
+      right: 10px;
+      background: rgba(20,20,24,0.92);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      z-index: 1000;
+      font-size: 11px;
+      line-height: 1.8;
+      backdrop-filter: blur(8px);
+    }
+    .map-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .map-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* Map tooltip styles */
+    .site-tooltip-wrap {
+      background: var(--bg-surface-high) !important;
+      color: var(--text) !important;
+      border: 1px solid rgba(255,255,255,0.08) !important;
+      border-radius: var(--radius-sm) !important;
+      padding: 0 !important;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+    }
+    .site-tooltip-wrap::before {
+      border-top-color: var(--bg-surface-high) !important;
+    }
+    .site-tooltip { padding: 12px 16px; font-size: 13px; line-height: 1.6; }
+    .popup-code { color: var(--gold); font-weight: 700; font-size: 13px; }
+    .popup-detail { color: var(--text-secondary); font-size: 12px; }
+    .popup-unavail { color: var(--text-muted); font-size: 11px; font-style: italic; margin-top: 4px; }
+    .popup-hint { color: var(--gold-light); font-size: 11px; margin-top: 4px; }
+
+    /* === VOLUME CONTROL === */
+    .volume-control {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .volume-control input[type="range"] {
+      width: 80px;
+      accent-color: var(--gold);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <img src="/images/nbbc-logo.png" alt="NBBC Logo" class="header-logo" />
+    <h1>RMNP Wilderness Reservation Launch Pad</h1>
+    <div class="header-meta">
+      <span id="current-time">--:--:-- --</span>
+      <span>|</span>
+      <a href="https://www.recreation.gov/permits/4675320" target="_blank" rel="noopener">recreation.gov permits</a>
+    </div>
+    <div class="reminder">Make sure you're logged into recreation.gov before launch!</div>
+  </header>
+
+  <div class="container">
+
+    <!-- DATE/TIME CONFIG -->
+    <section>
+      <h2>Target Time</h2>
+      <div class="config-grid">
+        <div class="field">
+          <label for="target-date">Date</label>
+          <input type="date" id="target-date" />
+        </div>
+        <div class="field">
+          <label for="target-time">Time</label>
+          <input type="time" id="target-time" value="08:00" />
+        </div>
+        <div class="field">
+          <label for="timezone">Timezone</label>
+          <select id="timezone">
+            <option value="America/Denver">Mountain (MDT)</option>
+            <option value="America/Chicago">Central (CDT)</option>
+            <option value="America/New_York">Eastern (EDT)</option>
+            <option value="America/Los_Angeles">Pacific (PDT)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="early-open">Early open (min)</label>
+          <input type="number" id="early-open" value="2" min="0" max="10" />
+        </div>
+        <div class="field">
+          <label for="group-size">Group Size</label>
+          <input type="number" id="group-size" min="1" max="12" value="7" />
+        </div>
+      </div>
+      <div class="calc-display">
+        <div><span>Tabs open at: </span><strong id="calc-tabs">--:--:-- --</strong></div>
+        <div><span>GO time: </span><strong id="calc-go">--:--:-- --</strong></div>
+      </div>
+    </section>
+
+    <!-- SITE SELECTOR -->
+    <section>
+      <h2>Select Campsites</h2>
+      <div class="filter-bar">
+        <div class="view-toggle">
+          <button id="view-table-btn" class="active">Table</button>
+          <button id="view-map-btn">Map</button>
+        </div>
+        <select id="area-filter">
+          <option value="">All Areas</option>
+        </select>
+        <input type="text" id="search" placeholder="Search by name..." />
+        <button class="btn-sm" id="nbbc-pick-btn">NBBC Picks</button>
+        <button class="btn-sm" id="select-all-btn">Select All</button>
+        <button class="btn-sm" id="clear-all-btn">Clear All</button>
+        <span class="selected-badge"><span id="selected-count">0</span> sites selected</span>
+      </div>
+      <div id="map-container">
+        <div id="map"></div>
+        <div class="map-legend">
+          <div class="map-legend-item">
+            <span class="map-legend-dot" style="background:#E0B234"></span>
+            <span>Selected</span>
+          </div>
+          <div class="map-legend-item">
+            <span class="map-legend-dot" style="background:#16a34a; border: 2px solid #15803d; width:12px; height:12px"></span>
+            <span>NBBC Picks</span>
+          </div>
+          <div class="map-legend-item">
+            <span class="map-legend-dot" style="background:#2563eb"></span>
+            <span>Available</span>
+          </div>
+          <div class="map-legend-item">
+            <span class="map-legend-dot" style="background:#9ca3af"></span>
+            <span>Unavailable</span>
+          </div>
+        </div>
+      </div>
+      <div class="site-table-wrap">
+        <table class="site-table">
+          <thead>
+            <tr>
+              <th data-col="select" style="width:36px"></th>
+              <th data-col="code">Code</th>
+              <th data-col="name">Name</th>
+              <th data-col="area">Area</th>
+              <th data-col="distanceMiles">Dist (mi)</th>
+              <th data-col="elevationFt">Elev (ft)</th>
+              <th data-col="elevGainFt">Gain (ft)</th>
+              <th data-col="numSites">Sites</th>
+              <th data-col="maxGroupSize">Group</th>
+              <th data-col="snowFreeDate">Snow Free</th>
+              <th data-col="privy">Privy</th>
+            </tr>
+          </thead>
+          <tbody id="site-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- LAUNCH CONTROL -->
+    <section class="launch-panel" id="launch-panel">
+      <h2>Launch Control</h2>
+      <div id="status-indicator">WAITING</div>
+      <div id="countdown-display">--:--:--</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <div class="launch-buttons">
+        <button class="btn-arm" id="arm-btn" disabled>Arm Launch</button>
+        <button class="btn-manual" id="manual-btn" disabled>Manual Launch Now</button>
+      </div>
+      <div class="volume-control">
+        <span>Vol</span>
+        <input type="range" id="volume" min="0" max="1" step="0.1" value="0.5" />
+      </div>
+      <div id="briefing-panel" class="briefing-panel">
+        <h3>rec.gov Checklist</h3>
+        <div class="briefing-summary">
+          <div class="briefing-item">
+            <span class="briefing-label">Group Size</span>
+            <span class="briefing-value" id="briefing-group-size">7</span>
+          </div>
+          <div class="briefing-item">
+            <span class="briefing-label">Suggested Trip Date</span>
+            <span class="briefing-value" id="briefing-trip-date">&mdash;</span>
+          </div>
+        </div>
+        <div class="briefing-sites" id="briefing-sites"></div>
+        <p class="briefing-hint">Select a Starting Area, then find your site on rec.gov</p>
+      </div>
+      <div class="fallback-panel" id="fallback-panel">
+        <h3>Popup blocked — click to open manually:</h3>
+        <div id="fallback-links"></div>
+      </div>
+    </section>
+
+    <!-- QUICK REFERENCE -->
+    <details>
+      <summary>Quick Reference & Tips</summary>
+      <div class="ref-content">
+        <ul>
+          <li>Reservations open March 1 at 8:00 AM MDT for the season</li>
+          <li>Log into <a href="https://www.recreation.gov" target="_blank">recreation.gov</a> in a separate tab BEFORE launch</li>
+          <li>All wilderness sites go through the same permits page — select your site within recreation.gov's flow</li>
+          <li>Have your trip dates, group size, and site preferences ready</li>
+          <li>Allow popups from this site for auto-open to work</li>
+          <li>If popups are blocked, use the fallback links that appear</li>
+          <li>Consider selecting backup sites in case your first choice fills instantly</li>
+        </ul>
+        <p style="margin-top:12px">
+          <a href="https://www.nps.gov/romo/planyourvisit/site_details.htm" target="_blank">NPS Site Details</a> &bull;
+          <a href="https://www.nps.gov/romo/planyourvisit/wilderness-backpacking-camping-site-map.htm" target="_blank">Campsite Map</a> &bull;
+          <a href="https://www.recreation.gov/permits/4675320" target="_blank">Recreation.gov Permits</a>
+        </p>
+      </div>
+    </details>
+
+  </div>
+
+  <script is:inline src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script is:inline>
+    // ============================================================
+    // STATE
+    // ============================================================
+    const STORAGE_KEY = 'rmnp_launch_state';
+    let sites = [];
+    let state = {
+      selectedSites: [],
+      targetDate: '',
+      targetTime: '08:00',
+      timezone: 'America/Denver',
+      earlyOpenMinutes: 2,
+      groupSize: 7,
+      armed: false,
+      activeView: 'table'
+    };
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if (saved) state = { ...state, ...saved };
+    } catch {}
+
+    if (!state.targetDate) {
+      const now = new Date();
+      const year = now.getMonth() >= 2 ? now.getFullYear() + 1 : now.getFullYear();
+      state.targetDate = year + '-03-01';
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    // ============================================================
+    // AUDIO
+    // ============================================================
+    let audioCtx = null;
+    let audioUnlocked = false;
+    let volume = 0.5;
+
+    function getAudioCtx() {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      return audioCtx;
+    }
+
+    function playTone(freq, duration, vol) {
+      try {
+        const ctx = getAudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq || 880;
+        gain.gain.value = (vol != null ? vol : volume) * 0.3;
+        osc.start();
+        osc.stop(ctx.currentTime + (duration || 200) / 1000);
+      } catch {}
+    }
+
+    function speak(text) {
+      try {
+        const u = new SpeechSynthesisUtterance(text);
+        u.rate = 1.1;
+        u.volume = volume;
+        speechSynthesis.speak(u);
+      } catch {}
+    }
+
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+      try {
+        const ctx = getAudioCtx();
+        if (ctx.state === 'suspended') ctx.resume();
+        playTone(1, 1, 0);
+        const u = new SpeechSynthesisUtterance('');
+        u.volume = 0;
+        speechSynthesis.speak(u);
+      } catch {}
+    }
+
+    // ============================================================
+    // DOM REFS
+    // ============================================================
+    const $ = (id) => document.getElementById(id);
+    const $time = $('current-time');
+    const $date = $('target-date');
+    const $timeInput = $('target-time');
+    const $tz = $('timezone');
+    const $early = $('early-open');
+    const $calcTabs = $('calc-tabs');
+    const $calcGo = $('calc-go');
+    const $areaFilter = $('area-filter');
+    const $search = $('search');
+    const $tbody = $('site-tbody');
+    const $selectedCount = $('selected-count');
+    const $selectAllBtn = $('select-all-btn');
+    const $clearAllBtn = $('clear-all-btn');
+    const $countdown = $('countdown-display');
+    const $status = $('status-indicator');
+    const $progress = $('progress-bar');
+    const $armBtn = $('arm-btn');
+    const $manualBtn = $('manual-btn');
+    const $launchPanel = $('launch-panel');
+    const $fallback = $('fallback-panel');
+    const $fallbackLinks = $('fallback-links');
+    const $volume = $('volume');
+    const $nbbcBtn = $('nbbc-pick-btn');
+    const $groupSize = $('group-size');
+    const $briefingPanel = $('briefing-panel');
+    const $briefingGroupSize = $('briefing-group-size');
+    const $briefingTripDate = $('briefing-trip-date');
+    const $briefingSites = $('briefing-sites');
+    const $viewTableBtn = $('view-table-btn');
+    const $viewMapBtn = $('view-map-btn');
+    const $mapContainer = $('map-container');
+    const $tableWrap = document.querySelector('.site-table-wrap');
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    $date.value = state.targetDate;
+    $timeInput.value = state.targetTime;
+    $tz.value = state.timezone;
+    $early.value = state.earlyOpenMinutes;
+    $groupSize.value = state.groupSize;
+    $volume.value = volume;
+
+    $date.addEventListener('change', function() { state.targetDate = $date.value; saveState(); updateCalc(); });
+    $timeInput.addEventListener('change', function() { state.targetTime = $timeInput.value; saveState(); updateCalc(); });
+    $tz.addEventListener('change', function() { state.timezone = $tz.value; saveState(); updateCalc(); });
+    $early.addEventListener('change', function() { state.earlyOpenMinutes = parseInt($early.value) || 0; saveState(); updateCalc(); });
+    $groupSize.addEventListener('change', function() { state.groupSize = parseInt($groupSize.value) || 1; updateGroupSizeMax(); updateBriefing(); saveState(); });
+    $volume.addEventListener('input', function() { volume = parseFloat($volume.value); });
+
+    fetch('/data/rmnp-sites-geo.json')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        sites = data;
+        populateAreaFilter();
+        renderTable();
+        updateButtons();
+        initMap();
+        setActiveView(state.activeView);
+        $groupSize.value = state.groupSize;
+        updateGroupSizeMax();
+        updateBriefing();
+        if (state.armed) {
+          $armBtn.textContent = 'Disarm';
+          $armBtn.classList.add('armed-btn');
+          $launchPanel.classList.add('armed');
+        }
+      });
+
+    // ============================================================
+    // VIEW TOGGLE
+    // ============================================================
+    function setActiveView(view) {
+      state.activeView = view;
+      if (view === 'map') {
+        $tableWrap.style.display = 'none';
+        $mapContainer.classList.add('active');
+        $viewMapBtn.classList.add('active');
+        $viewTableBtn.classList.remove('active');
+        if (map) map.invalidateSize();
+        updateMarkers();
+      } else {
+        $tableWrap.style.display = '';
+        $mapContainer.classList.remove('active');
+        $viewTableBtn.classList.add('active');
+        $viewMapBtn.classList.remove('active');
+      }
+      saveState();
+    }
+    $viewTableBtn.addEventListener('click', function() { setActiveView('table'); });
+    $viewMapBtn.addEventListener('click', function() { setActiveView('map'); });
+
+    // ============================================================
+    // MAP
+    // ============================================================
+    var map = null;
+    var markers = [];
+
+    function initMap() {
+      map = L.map('map', {
+        center: [40.35, -105.68],
+        zoom: 11,
+        zoomControl: true
+      });
+
+      L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>) &copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+        maxZoom: 17
+      }).addTo(map);
+
+      updateMarkers();
+    }
+
+    function updateMarkers() {
+      if (!map) return;
+
+      // Remove existing markers
+      for (var i = 0; i < markers.length; i++) {
+        map.removeLayer(markers[i]);
+      }
+      markers = [];
+
+      var area = $areaFilter.value;
+      var query = $search.value.toLowerCase();
+      var bounds = [];
+
+      for (var i = 0; i < sites.length; i++) {
+        var s = sites[i];
+        if (!s.lat || !s.lng) continue;
+        if (area && s.area !== area) continue;
+        if (query && s.name.toLowerCase().indexOf(query) === -1 && s.code.toLowerCase().indexOf(query) === -1) continue;
+        if (nbbcFilter && !s.nbbcPick) continue;
+
+        var isSelected = state.selectedSites.indexOf(s.code) !== -1;
+        var isAvailable = s.available;
+
+        var isDurksPick = s.nbbcPick;
+        var fillColor, strokeColor, radius, fillOpacity, weight;
+        if (isSelected) {
+          fillColor = '#E0B234';
+          strokeColor = '#b35a10';
+          radius = 9;
+          fillOpacity = 0.95;
+          weight = 2;
+        } else if (isDurksPick && isAvailable) {
+          fillColor = '#16a34a';
+          strokeColor = '#15803d';
+          radius = 8;
+          fillOpacity = 0.9;
+          weight = 2;
+        } else if (isAvailable) {
+          fillColor = '#2563eb';
+          strokeColor = '#1e40af';
+          radius = 7;
+          fillOpacity = 0.75;
+          weight = 1.5;
+        } else {
+          fillColor = '#9ca3af';
+          strokeColor = '#6b7280';
+          radius = 5;
+          fillOpacity = 0.5;
+          weight = 1;
+        }
+
+        var marker = L.circleMarker([s.lat, s.lng], {
+          radius: radius,
+          fillColor: fillColor,
+          color: strokeColor,
+          weight: weight,
+          fillOpacity: fillOpacity
+        });
+
+        // Tooltip on hover, click to toggle selection
+        (function(site, mkr) {
+          // Build tooltip content with safe DOM methods
+          var tip = document.createElement('div');
+          tip.className = 'site-tooltip';
+
+          var codeLine = document.createElement('div');
+          codeLine.className = 'popup-code';
+          codeLine.textContent = site.code + ' \u2014 ' + site.name;
+          tip.appendChild(codeLine);
+
+          if (site.nbbcPick) {
+            var pickLine = document.createElement('div');
+            pickLine.style.cssText = 'color:#4ade80;font-size:11px;font-weight:600';
+            pickLine.textContent = "\u2605 NBBC Pick";
+            tip.appendChild(pickLine);
+          }
+
+          var areaLine = document.createElement('div');
+          areaLine.className = 'popup-detail';
+          areaLine.textContent = site.area;
+          tip.appendChild(areaLine);
+
+          var statsLine = document.createElement('div');
+          statsLine.className = 'popup-detail';
+          var stats = [];
+          if (site.distanceMiles) stats.push(site.distanceMiles + ' mi');
+          if (site.elevationFt) stats.push(site.elevationFt.toLocaleString() + ' ft');
+          if (site.elevGainFt) stats.push('+' + site.elevGainFt.toLocaleString() + ' gain');
+          if (stats.length) { statsLine.textContent = stats.join(' \u2022 '); tip.appendChild(statsLine); }
+
+          var detailLine = document.createElement('div');
+          detailLine.className = 'popup-detail';
+          var details = [];
+          if (site.numSites) details.push(site.numSites + ' site' + (site.numSites > 1 ? 's' : ''));
+          if (site.maxGroupSize) details.push('Max ' + site.maxGroupSize + ' people');
+          if (site.snowFreeDate) details.push('Snow free: ' + site.snowFreeDate);
+          if (site.privy && site.privy !== 'No') details.push('Privy: ' + site.privy);
+          if (details.length) { detailLine.textContent = details.join(' \u2022 '); tip.appendChild(detailLine); }
+
+          if (!site.available) {
+            var unavLine = document.createElement('div');
+            unavLine.className = 'popup-unavail';
+            unavLine.textContent = 'Unavailable';
+            tip.appendChild(unavLine);
+          } else {
+            var actionLine = document.createElement('div');
+            actionLine.className = 'popup-hint';
+            var sel = state.selectedSites.indexOf(site.code) !== -1;
+            actionLine.textContent = sel ? 'Click to deselect' : 'Click to select';
+            tip.appendChild(actionLine);
+          }
+
+          mkr.bindTooltip(tip, {
+            direction: 'top',
+            offset: [0, -8],
+            className: 'site-tooltip-wrap'
+          });
+
+          // Click to toggle selection
+          if (site.available) {
+            mkr.on('click', function() {
+              toggleSiteSelection(site.code);
+            });
+          }
+        })(s, marker);
+
+        marker.addTo(map);
+        markers.push(marker);
+        bounds.push([s.lat, s.lng]);
+      }
+
+      // Fit bounds when area filter changes
+      if (bounds.length > 0 && area) {
+        map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+      }
+    }
+
+    function toggleSiteSelection(code) {
+      var idx = state.selectedSites.indexOf(code);
+      if (idx !== -1) {
+        state.selectedSites.splice(idx, 1);
+      } else {
+        state.selectedSites.push(code);
+      }
+      renderTable();
+      updateMarkers();
+      updateButtons();
+      saveState();
+    }
+
+    // ============================================================
+    // AREA FILTER
+    // ============================================================
+    function populateAreaFilter() {
+      var areas = [];
+      var seen = {};
+      for (var i = 0; i < sites.length; i++) {
+        if (!seen[sites[i].area]) {
+          seen[sites[i].area] = true;
+          areas.push(sites[i].area);
+        }
+      }
+      for (var j = 0; j < areas.length; j++) {
+        var opt = document.createElement('option');
+        opt.value = areas[j];
+        opt.textContent = areas[j];
+        $areaFilter.appendChild(opt);
+      }
+    }
+    $areaFilter.addEventListener('change', renderTable);
+    $search.addEventListener('input', renderTable);
+
+    var nbbcFilter = false;
+    $nbbcBtn.addEventListener('click', function() {
+      nbbcFilter = !nbbcFilter;
+      $nbbcBtn.classList.toggle('active', nbbcFilter);
+      renderTable();
+    });
+
+    // ============================================================
+    // TABLE RENDERING (safe DOM methods)
+    // ============================================================
+    var sortCol = 'code';
+    var sortDir = 'asc';
+
+    document.querySelectorAll('.site-table th[data-col]').forEach(function(th) {
+      th.addEventListener('click', function() {
+        var col = th.dataset.col;
+        if (col === 'select') return;
+        if (sortCol === col) {
+          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortCol = col;
+          sortDir = 'asc';
+        }
+        renderTable();
+      });
+    });
+
+    function createCell(text, className) {
+      var td = document.createElement('td');
+      td.textContent = text;
+      if (className) td.className = className;
+      return td;
+    }
+
+    function renderTable() {
+      var area = $areaFilter.value;
+      var query = $search.value.toLowerCase();
+
+      var filtered = sites.filter(function(s) {
+        if (area && s.area !== area) return false;
+        if (query && s.name.toLowerCase().indexOf(query) === -1 && s.code.toLowerCase().indexOf(query) === -1) return false;
+        if (nbbcFilter && !s.nbbcPick) return false;
+        return true;
+      });
+
+      filtered.sort(function(a, b) {
+        var av = a[sortCol], bv = b[sortCol];
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
+        if (typeof av === 'string') av = av.toLowerCase();
+        if (typeof bv === 'string') bv = bv.toLowerCase();
+        if (av < bv) return sortDir === 'asc' ? -1 : 1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      document.querySelectorAll('.site-table th').forEach(function(th) {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (th.dataset.col === sortCol) {
+          th.classList.add(sortDir === 'asc' ? 'sorted-asc' : 'sorted-desc');
+        }
+      });
+
+      // Clear table body safely
+      while ($tbody.firstChild) {
+        $tbody.removeChild($tbody.firstChild);
+      }
+
+      for (var i = 0; i < filtered.length; i++) {
+        var s = filtered[i];
+        var checked = state.selectedSites.indexOf(s.code) !== -1;
+        var unavail = !s.available;
+        var privyClass = s.privy === 'Yes' ? 'privy-yes' : s.privy === 'HWB' ? 'privy-hwb' : 'privy-no';
+
+        var tr = document.createElement('tr');
+        if (checked) tr.classList.add('selected');
+        if (unavail) tr.classList.add('site-unavail');
+
+        // Checkbox cell
+        var tdCb = document.createElement('td');
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.dataset.code = s.code;
+        cb.checked = checked;
+        if (unavail) cb.disabled = true;
+        tdCb.appendChild(cb);
+        tr.appendChild(tdCb);
+
+        tr.appendChild(createCell(s.code));
+        var nameTd = createCell(s.name);
+        if (s.nbbcPick) {
+          var badge = document.createElement('span');
+          badge.className = 'nbbc-badge';
+          badge.textContent = '\u2605';
+          badge.title = "NBBC Pick";
+          nameTd.appendChild(badge);
+        }
+        tr.appendChild(nameTd);
+        tr.appendChild(createCell(s.area));
+        tr.appendChild(createCell(s.distanceMiles != null ? String(s.distanceMiles) : '-'));
+        tr.appendChild(createCell(s.elevationFt ? s.elevationFt.toLocaleString() : '-'));
+        tr.appendChild(createCell(s.elevGainFt ? s.elevGainFt.toLocaleString() : '-'));
+        tr.appendChild(createCell(s.numSites ? String(s.numSites) : '-'));
+        tr.appendChild(createCell(s.maxGroupSize ? String(s.maxGroupSize) : '-'));
+        tr.appendChild(createCell(s.snowFreeDate || '-'));
+        tr.appendChild(createCell(s.privy || '-', privyClass));
+
+        $tbody.appendChild(tr);
+
+        // Checkbox listener (use closure to capture code)
+        (function(code, checkbox, row) {
+          checkbox.addEventListener('change', function() {
+            if (checkbox.checked) {
+              if (state.selectedSites.indexOf(code) === -1) state.selectedSites.push(code);
+            } else {
+              state.selectedSites = state.selectedSites.filter(function(c) { return c !== code; });
+            }
+            row.classList.toggle('selected', checkbox.checked);
+            updateCount();
+            updateButtons();
+            updateBriefing();
+            saveState();
+          });
+        })(s.code, cb, tr);
+      }
+
+      updateCount();
+      updateMarkers();
+      updateGroupSizeMax();
+    }
+
+    function updateCount() {
+      $selectedCount.textContent = String(state.selectedSites.length);
+    }
+
+    $selectAllBtn.addEventListener('click', function() {
+      var area = $areaFilter.value;
+      var query = $search.value.toLowerCase();
+      for (var i = 0; i < sites.length; i++) {
+        var s = sites[i];
+        if (!s.available) continue;
+        if (area && s.area !== area) continue;
+        if (query && s.name.toLowerCase().indexOf(query) === -1 && s.code.toLowerCase().indexOf(query) === -1) continue;
+        if (state.selectedSites.indexOf(s.code) === -1) state.selectedSites.push(s.code);
+      }
+      renderTable();
+      updateButtons();
+      updateBriefing();
+      saveState();
+    });
+
+    $clearAllBtn.addEventListener('click', function() {
+      state.selectedSites = [];
+      renderTable();
+      updateButtons();
+      updateBriefing();
+      saveState();
+    });
+
+    // ============================================================
+    // TIME CALCULATIONS
+    // ============================================================
+    function getTargetMs() {
+      var dtStr = state.targetDate + 'T' + state.targetTime + ':00';
+      var localNow = new Date();
+      var tzNow = new Date(localNow.toLocaleString('en-US', { timeZone: state.timezone }));
+      var offset = localNow.getTime() - tzNow.getTime();
+      var naive = new Date(dtStr);
+      return naive.getTime() + offset;
+    }
+
+    function formatTimeInTz(ms) {
+      var d = new Date(ms);
+      return d.toLocaleTimeString('en-US', {
+        timeZone: state.timezone,
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+      });
+    }
+
+    function updateCalc() {
+      var goMs = getTargetMs();
+      var tabsMs = goMs - state.earlyOpenMinutes * 60 * 1000;
+      $calcTabs.textContent = formatTimeInTz(tabsMs);
+      $calcGo.textContent = formatTimeInTz(goMs);
+    }
+    updateCalc();
+
+    // ============================================================
+    // BUTTONS
+    // ============================================================
+    function updateButtons() {
+      var hasSites = state.selectedSites.length > 0;
+      $armBtn.disabled = !hasSites;
+      $manualBtn.disabled = !hasSites;
+    }
+
+    // ============================================================
+    // BRIEFING PANEL
+    // ============================================================
+    function updateGroupSizeMax() {
+      var selected = getSelectedSiteObjects();
+      if (selected.length === 0) return;
+      var minMax = 12;
+      for (var i = 0; i < selected.length; i++) {
+        var m = selected[i].maxGroupSize;
+        if (m && m < minMax) minMax = m;
+      }
+      $groupSize.max = minMax;
+      if (state.groupSize > minMax) {
+        state.groupSize = minMax;
+        $groupSize.value = minMax;
+        saveState();
+      }
+    }
+
+    function getSelectedSiteObjects() {
+      var result = [];
+      for (var i = 0; i < sites.length; i++) {
+        if (state.selectedSites.indexOf(sites[i].code) !== -1) {
+          result.push(sites[i]);
+        }
+      }
+      return result;
+    }
+
+    function computeSuggestedTripDate() {
+      var selected = getSelectedSiteObjects();
+      var earliest = null;
+      var now = new Date();
+      for (var i = 0; i < selected.length; i++) {
+        var sfd = selected[i].snowFreeDate;
+        if (!sfd) continue;
+        var parts = sfd.split('/');
+        if (parts.length !== 2) continue;
+        var month = parseInt(parts[0]) - 1;
+        var day = parseInt(parts[1]);
+        var year = now.getFullYear();
+        var d = new Date(year, month, day);
+        if (d < now) d = new Date(year + 1, month, day);
+        // Subtract 7 days
+        d.setDate(d.getDate() - 7);
+        if (!earliest || d < earliest) earliest = d;
+      }
+      return earliest;
+    }
+
+    function formatDateNice(date) {
+      if (!date) return '\u2014';
+      var days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return days[date.getDay()] + ', ' + months[date.getMonth()] + ' ' + date.getDate();
+    }
+
+    function updateBriefing() {
+      var selected = getSelectedSiteObjects();
+      if (selected.length === 0) {
+        $briefingPanel.classList.remove('visible');
+        return;
+      }
+      $briefingPanel.classList.add('visible');
+
+      // Summary values
+      $briefingGroupSize.textContent = String(state.groupSize);
+      var tripDate = computeSuggestedTripDate();
+      $briefingTripDate.textContent = tripDate ? formatDateNice(tripDate) : '\u2014';
+
+      // Group sites by area
+      var areaMap = {};
+      var areaOrder = [];
+      for (var i = 0; i < selected.length; i++) {
+        var s = selected[i];
+        var area = s.area || 'Other';
+        if (!areaMap[area]) {
+          areaMap[area] = [];
+          areaOrder.push(area);
+        }
+        areaMap[area].push(s);
+      }
+      areaOrder.sort();
+
+      // Build site list grouped by area
+      while ($briefingSites.firstChild) {
+        $briefingSites.removeChild($briefingSites.firstChild);
+      }
+      for (var a = 0; a < areaOrder.length; a++) {
+        var area = areaOrder[a];
+        var group = document.createElement('div');
+        group.className = 'briefing-area-group';
+
+        var label = document.createElement('div');
+        label.className = 'briefing-area-label';
+        label.textContent = area;
+        group.appendChild(label);
+
+        var sitesInArea = areaMap[area];
+        for (var j = 0; j < sitesInArea.length; j++) {
+          var s = sitesInArea[j];
+          var row = document.createElement('div');
+          row.className = 'briefing-site-row';
+
+          var top = document.createElement('div');
+          top.className = 'briefing-site-top';
+
+          var code = document.createElement('span');
+          code.className = 'briefing-site-code';
+          code.textContent = s.code;
+          top.appendChild(code);
+
+          var name = document.createElement('span');
+          name.className = 'briefing-site-name';
+          name.textContent = s.name;
+          top.appendChild(name);
+
+          row.appendChild(top);
+
+          var meta = document.createElement('span');
+          meta.className = 'briefing-site-meta';
+          var parts = [];
+          if (s.snowFreeDate) parts.push('snow-free ' + s.snowFreeDate);
+          if (s.maxGroupSize) parts.push('max ' + s.maxGroupSize);
+          if (s.distanceMiles != null) parts.push(s.distanceMiles + ' mi');
+          meta.textContent = parts.join(' \u00B7 ');
+          row.appendChild(meta);
+
+          group.appendChild(row);
+        }
+        $briefingSites.appendChild(group);
+      }
+    }
+
+    // ============================================================
+    // LAUNCH
+    // ============================================================
+    var tabsOpened = false;
+    var spokenMilestones = {};
+
+    function launchTabs() {
+      if (tabsOpened) return;
+      tabsOpened = true;
+
+      var availUrl = 'https://www.recreation.gov/permits/4675320/registration/detailed-availability';
+      var w = window.open(availUrl, 'rmnp_permits', 'width=1200,height=900,noopener');
+      if (!w || w.closed) {
+        showFallback();
+      }
+    }
+
+    function showFallback() {
+      $fallback.style.display = 'block';
+      // Clear previous links
+      while ($fallbackLinks.firstChild) {
+        $fallbackLinks.removeChild($fallbackLinks.firstChild);
+      }
+      var availUrl = 'https://www.recreation.gov/permits/4675320/registration/detailed-availability';
+      var a = document.createElement('a');
+      a.href = availUrl;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'fallback-link';
+      a.textContent = 'Open RMNP Permit Availability';
+      $fallbackLinks.appendChild(a);
+    }
+
+    // ARM
+    $armBtn.addEventListener('click', function() {
+      unlockAudio();
+
+      if (state.armed) {
+        state.armed = false;
+        $armBtn.textContent = 'Arm Launch';
+        $armBtn.classList.remove('armed-btn');
+        $launchPanel.classList.remove('armed');
+        tabsOpened = false;
+        spokenMilestones = {};
+        updateBriefing();
+        saveState();
+        return;
+      }
+
+      state.armed = true;
+      $armBtn.textContent = 'Disarm';
+      $armBtn.classList.add('armed-btn');
+      $launchPanel.classList.add('armed');
+      playTone(660, 150);
+      setTimeout(function() { playTone(880, 150); }, 200);
+      speak('Launch armed. Standing by.');
+      updateBriefing();
+      saveState();
+    });
+
+    // MANUAL LAUNCH
+    $manualBtn.addEventListener('click', function() {
+      unlockAudio();
+      updateBriefing();
+      speak('Manual launch. Opening tabs now.');
+      // Reset tabsOpened so manual launch always works
+      tabsOpened = false;
+      // Short delay so user sees the briefing panel before tab opens and steals focus
+      setTimeout(function() { launchTabs(); }, 1500);
+    });
+
+    // ============================================================
+    // COUNTDOWN LOOP
+    // ============================================================
+    function updateClock() {
+      var now = new Date();
+      $time.textContent = now.toLocaleTimeString('en-US', {
+        timeZone: state.timezone, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+      });
+    }
+
+    function pad2(n) { return n < 10 ? '0' + n : String(n); }
+
+    function tick() {
+      updateClock();
+
+      var nowMs = Date.now();
+      var goMs = getTargetMs();
+      var tabsMs = goMs - state.earlyOpenMinutes * 60 * 1000;
+      var diff = goMs - nowMs;
+
+      if (diff <= 0) {
+        $countdown.textContent = '00:00:00';
+        $countdown.className = 'go';
+        $status.textContent = 'GO!';
+        $status.className = 'go';
+        $progress.style.width = '100%';
+      } else {
+        var h = Math.floor(diff / 3600000);
+        var m = Math.floor((diff % 3600000) / 60000);
+        var s = Math.floor((diff % 60000) / 1000);
+        $countdown.textContent = pad2(h) + ':' + pad2(m) + ':' + pad2(s);
+
+        if (diff <= 10000) {
+          $countdown.className = 'critical';
+          $status.textContent = 'COUNTDOWN';
+          $status.className = 'countdown';
+        } else if (diff <= 60000) {
+          $countdown.className = 'urgent';
+          $status.textContent = 'ALMOST TIME';
+          $status.className = 'soon';
+        } else if (diff <= state.earlyOpenMinutes * 60000 + 30000) {
+          $countdown.className = 'urgent';
+          $status.textContent = 'TABS OPENING SOON';
+          $status.className = 'soon';
+        } else {
+          $countdown.className = '';
+          $status.textContent = state.armed ? 'ARMED' : 'WAITING';
+          $status.className = '';
+        }
+
+        var window5m = 5 * 60 * 1000;
+        if (diff < window5m) {
+          $progress.style.width = ((1 - diff / window5m) * 100) + '%';
+        }
+      }
+
+      if (state.armed) {
+        var secRemain = Math.round(diff / 1000);
+
+        if (nowMs >= tabsMs && !tabsOpened) {
+          speak('Opening browser tabs. Get ready!');
+          playTone(880, 300);
+          launchTabs();
+        }
+
+        if (secRemain === 60 && !spokenMilestones[60]) {
+          spokenMilestones[60] = true;
+          speak('One minute to go!');
+          playTone(660, 200);
+        }
+
+        if (secRemain === 30 && !spokenMilestones[30]) {
+          spokenMilestones[30] = true;
+          speak('Thirty seconds!');
+          playTone(770, 200);
+        }
+
+        if (secRemain <= 10 && secRemain > 0 && !spokenMilestones[secRemain]) {
+          spokenMilestones[secRemain] = true;
+          speak(String(secRemain));
+          playTone(880 + (10 - secRemain) * 40, 100);
+        }
+
+        if (secRemain <= 0 && !spokenMilestones[0]) {
+          spokenMilestones[0] = true;
+          speak('Go go go! Book now!');
+          playTone(1200, 200);
+          setTimeout(function() { playTone(1200, 200); }, 300);
+          setTimeout(function() { playTone(1200, 400); }, 600);
+        }
+      }
+    }
+
+    setInterval(tick, 1000);
+    tick();
+  </script>
+</body>
+</html>
