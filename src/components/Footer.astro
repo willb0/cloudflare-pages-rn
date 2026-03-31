@@ -12,6 +12,12 @@ const navColumns = [
     ],
   },
   {
+    title: 'Products',
+    links: [
+      { label: 'CMMC Compliance Platform', href: 'https://compliance.kblabs.us', external: true },
+    ],
+  },
+  {
     title: 'Services',
     links: [
       { label: 'AI & ML', href: '#services' },
@@ -25,7 +31,7 @@ const navColumns = [
 
 <footer class="border-t border-white/5 bg-bg-primary">
   <div class="max-w-7xl mx-auto px-6 py-16">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-12">
       <div class="md:col-span-2">
         <a href="/" class="inline-block mb-4">
           <img src="/img/logo-white.png" alt="KB Labs" class="h-8 w-auto" />
@@ -46,8 +52,17 @@ const navColumns = [
           <ul class="space-y-3">
             {col.links.map((link) => (
               <li>
-                <a href={link.href} class="text-text-secondary text-sm hover:text-gold transition-colors">
+                <a
+                  href={link.href}
+                  class="text-text-secondary text-sm hover:text-gold transition-colors"
+                  {...(link.external ? { target: '_blank', rel: 'noopener' } : {})}
+                >
                   {link.label}
+                  {link.external && (
+                    <svg class="w-3 h-3 inline-block ml-1 -mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  )}
                 </a>
               </li>
             ))}
